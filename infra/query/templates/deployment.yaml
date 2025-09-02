@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: query-service-deployment
+  labels:
+    app: query-service
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: query-service
+  template:
+    metadata:
+      labels:
+        app: query-service
+    spec:
+      containers:
+        - name: query-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+          env:
+            - name: PORT_PRODUCT
+              value: "{{ .Values.env.portProduct }}"
+            - name: QUERY_SERVICE_PORT
+              value: "{{ .Values.env.queryServicePort }}"
+            - name: PRODUCT_SERVICE_PORT
+              value: "{{ .Values.env.productServicePort }}"
+            - name: AWS_ACCESS_KEY_ID
+              value: "{{ .Values.env.awsAccessKeyId }}"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "{{ .Values.env.awsSecretAccessKey }}"
+            - name: AWS_REGION
+              value: "{{ .Values.env.awsRegion }}"
+          startupProbe:
+            httpGet:
+              path: "{{ .Values.startupProbe.path }}"
+              port: {{ .Values.startupProbe.port }}
+            failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+            periodSeconds: {{ .Values.startupProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.startupProbe.timeoutSeconds }}
+

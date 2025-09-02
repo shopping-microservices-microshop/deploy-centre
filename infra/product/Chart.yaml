@@ -1,0 +1,7 @@
+apiVersion: v2
+name: product-service
+description: Helm chart for deploying Product Service
+type: application
+version: 0.1.0        # Helm chart version
+appVersion: "beta"     # Docker image version
+
