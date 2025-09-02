@@ -1,0 +1,42 @@
+replicaCount: 1
+
+image:
+  repository: willchrist/cart
+  tag: v2
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+persistence:
+  enabled: true
+  storage: 1Gi
+  mountPath: /app/data
+
+securityContext:
+  runAsUser: 1000
+  fsGroup: 1000
+
+initContainer:
+  image: busybox:1.32
+  runAsUser: 0
+  command: ['sh', '-c', 'chown -R 1000:1000 /app/data']
+
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 75
+
+
+resources:
+  limits:
+    cpu: 500m        # Maximum CPU
+    memory: 512Mi    # Maximum memory
+  requests:
+    cpu: 250m        # Minimum guaranteed CPU
+    memory: 256Mi    # Minimum guaranteed memory
+
