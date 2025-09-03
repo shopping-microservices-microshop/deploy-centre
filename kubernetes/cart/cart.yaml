@@ -13,7 +13,10 @@ spec:
   resources:
     requests:
       storage: 1Gi # Request 1 Gibibyte of storage.
-
+  template:
+    spec:
+      containers:
+        - image: willchrist/cart-service:7e44ac7
 ---
 # =================================================================
 # 2. Deployment for the Cart Service
@@ -42,20 +45,20 @@ spec:
       # --- FIX: ADD INIT CONTAINER TO SET PERMISSIONS ---
       # This container runs before the main app container to fix volume permissions.
       initContainers:
-      - name: init-permissions
-        image: busybox:1.32
-        # --- FIX: RUN INIT CONTAINER AS ROOT ---
-        # This container needs root privileges to run 'chown'.
-        # The pod-level securityContext will still apply to the main container.
-        securityContext:
-          runAsUser: 0
-        command: ['sh', '-c', 'chown -R 1000:1000 /app/data']
-        volumeMounts:
-        - name: cart-storage
-          mountPath: /app/data
+        - name: init-permissions
+          image: busybox:1.32
+          # --- FIX: RUN INIT CONTAINER AS ROOT ---
+          # This container needs root privileges to run 'chown'.
+          # The pod-level securityContext will still apply to the main container.
+          securityContext:
+            runAsUser: 0
+          command: ['sh', '-c', 'chown -R 1000:1000 /app/data']
+          volumeMounts:
+            - name: cart-storage
+              mountPath: /app/data
       containers:
         - name: cart-service
-          image: willchrist/cart:v2 # The Docker image to run.
+          image: willchrist/cart-service:7e44ac7 # The Docker image to run.
           ports:
             - containerPort: 8080 # The port the application listens on inside the container.
           env:
@@ -68,7 +71,6 @@ spec:
         - name: cart-storage
           persistentVolumeClaim:
             claimName: cart-db-pvc # Use the PersistentVolumeClaim created above.
-
 ---
 # =================================================================
 # 3. Service to Expose the Deployment
@@ -87,3 +89,7 @@ spec:
     - protocol: TCP
       port: 8080 # The port that other services will connect to.
       targetPort: 8080 # The port on the pod to forward traffic to.
+  template:
+    spec:
+      containers:
+        - image: willchrist/cart-service:7e44ac7
