@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     # If using GitHub:
-    repoURL: 'https://github.com/will-chrizt/deploy-centre.git'
+    repoURL: 'https://github.com/shopping-microservices-microshop/deploy-centre.git'
     # If using local files on the Argo CD server, use file path:
     # repoURL: 'file:///home/ubuntu/deploy-centre/kubernetes'
     path: kubernetes
