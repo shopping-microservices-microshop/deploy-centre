@@ -25,9 +25,15 @@ spec:
         - name: PRODUCT_SERVICE_PORT
           value: "8001"
         - name: AWS_ACCESS_KEY_ID
-          value: "DUMMY_AWS_ACCESS_KEY_ID"
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: AWS_ACCESS_KEY_ID
         - name: AWS_SECRET_ACCESS_KEY
-          value: "DUMMY_AWS_SECRET_ACCESS_KEY"
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: AWS_SECRET_ACCESS_KEY
         - name: AWS_REGION
           value: "us-east-1"
         
@@ -36,11 +42,9 @@ spec:
             cpu: "200m"
             memory: "256Mi"
           limits:
-            cpu: "1000m" # 1 CPU Core
+            cpu: "1000m"
             memory: "512Mi"
 
-        # The startup probe performs a one-time, full check to ensure
-        # the service and its dependencies are working on launch.
         startupProbe:
           httpGet:
             path: /query?q=startup
