@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: willchrist/front:beta
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              cpu: "100m"  # Request 0.1 of a CPU core
+            limits:
+              cpu: "500m"  # Limit to a maximum of 0.5 of a CPU core
+          resources:
+            requests:
+              memory: "256Mi"   # minimum memory guaranteed
+              cpu: "250m"       # minimum CPU guaranteed
+            limits:
+              memory: "512Mi"   # maximum memory allowed
+              cpu: "500m"
+          envFrom:
+            - configMapRef:
+                name: ecommerce-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: ClusterIP

@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: polyglot-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    # If using GitHub:
+    repoURL: 'https://github.com/will-chrizt/deploy-centre.git'
+    # If using local files on the Argo CD server, use file path:
+    # repoURL: 'file:///home/ubuntu/deploy-centre/kubernetes'
+    path: kubernetes
+    targetRevision: HEAD
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true      # Delete resources removed from repo
+      selfHeal: true   # Correct drift automatically
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true  # Only apply changes that differ from cluster
+  info:
+    - name: Description
+      value: "Deploy all microservices and supporting resources for Polyglot app"
+
