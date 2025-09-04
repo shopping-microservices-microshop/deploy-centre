@@ -14,25 +14,24 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: willchrist/front:beta
+          image: willchrist/frontend-service:1f0f01d
           ports:
             - containerPort: 8000
           resources:
             requests:
-              cpu: "100m"  # Request 0.1 of a CPU core
+              cpu: "100m" # Request 0.1 of a CPU core
             limits:
-              cpu: "500m"  # Limit to a maximum of 0.5 of a CPU core
+              cpu: "500m" # Limit to a maximum of 0.5 of a CPU core
           resources:
             requests:
-              memory: "256Mi"   # minimum memory guaranteed
-              cpu: "250m"       # minimum CPU guaranteed
+              memory: "256Mi" # minimum memory guaranteed
+              cpu: "250m" # minimum CPU guaranteed
             limits:
-              memory: "512Mi"   # maximum memory allowed
+              memory: "512Mi" # maximum memory allowed
               cpu: "500m"
           envFrom:
             - configMapRef:
                 name: ecommerce-config
-
 ---
 apiVersion: v1
 kind: Service
@@ -46,3 +45,7 @@ spec:
       port: 8000
       targetPort: 8000
   type: ClusterIP
+  template:
+    spec:
+      containers:
+        - image: willchrist/frontend-service:1f0f01d
