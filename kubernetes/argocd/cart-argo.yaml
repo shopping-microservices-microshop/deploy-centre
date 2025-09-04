@@ -6,8 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/shopping-microservices-microshop/deploy-centre.git'
-    path: kubernetes/cart
+    repoURL: 'https://github.com/shopping-microservices-microshop/cart-service.git'
+    path: k8s
     targetRevision: HEAD
   destination:
     server: 'https://kubernetes.default.svc'
