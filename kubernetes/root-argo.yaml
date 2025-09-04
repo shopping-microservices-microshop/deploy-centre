@@ -1,0 +1,25 @@
+# This is the single, top-level "App of Apps".
+# You only need to apply this file to your cluster once.
+# It tells Argo CD to look at the 'apps' directory in your Git repo
+# and create/manage any Application resources it finds there.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # IMPORTANT: Update this URL to your repository where these files are stored.
+    repoURL: 'https://github.com/shopping-microservices-microshop/deploy-centre.git'
+    path: kubernetes/argocd # This points to the directory containing your app manifests
+    targetRevision: HEAD
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: argocd # This app lives in the argocd namespace
+  syncPolicy:
+    automated:
+      prune: true # Allows the root app to delete child apps if their manifests are removed from Git.
+      selfHeal: true
