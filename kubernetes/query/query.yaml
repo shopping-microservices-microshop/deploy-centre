@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: query-service-deployment
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -14,7 +15,7 @@ spec:
     spec:
       containers:
         - name: query-service
-          image: willchrist/query-service:4eae80f
+          image: willchrist/query:beta
           ports:
             - containerPort: 8002
           env:
@@ -50,11 +51,13 @@ spec:
             failureThreshold: 12
             periodSeconds: 10
             timeoutSeconds: 10
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: query-service
+  namespace: default
 spec:
   selector:
     app: query-service
@@ -63,7 +66,4 @@ spec:
       port: 8002
       targetPort: 8002
   type: ClusterIP
-  template:
-    spec:
-      containers:
-        - image: willchrist/query-service:4eae80f
+
