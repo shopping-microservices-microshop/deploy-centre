@@ -3,8 +3,6 @@ kind: Application
 metadata:
   name: cart-service
   namespace: argocd
-  annotations:
-    argocd-image-updater.argoproj.io/cart-service.update-strategy: latest
 spec:
   project: default
   source:
@@ -20,4 +18,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-

@@ -1,22 +1,3 @@
-# =================================================================
-# 1. PersistentVolumeClaim (PVC) for Database Storage
-# =================================================================
-# This object requests a piece of storage from the cluster to persist
-# the SQLite database file. It's the K8s equivalent of a Docker named volume.
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: cart-db-pvc # The name we'll use to refer to this storage claim.
-spec:
-  accessModes:
-    - ReadWriteOnce # This volume can be mounted as read-write by a single node.
-  resources:
-    requests:
-      storage: 1Gi # Request 1 Gibibyte of storage.
-  template:
-    spec:
-      containers:
-        - image: willchrist/cart-service:efac7f0
 ---
 # =================================================================
 # 2. Deployment for the Cart Service
