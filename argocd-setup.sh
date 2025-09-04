@@ -1,84 +1,78 @@
 #!/bin/bash
 set -e
 
-# Install dependencies
+# --- This script installs and configures ArgoCD on a Kubernetes cluster ---
+
+# 1. Install dependencies: apache2-utils (for htpasswd), curl, and jq.
 echo "Installing dependencies..."
 sudo apt-get update -y
 sudo apt-get install -y apache2-utils curl jq
 
-# Install ArgoCD
+# 2. Install ArgoCD from the official stable manifest.
 echo "Installing ArgoCD..."
 kubectl create namespace argocd || true
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 
-# Patch ArgoCD service to NodePort
-echo "Patching ArgoCD server service to NodePort..."
-kubectl -n argocd patch svc argocd-server \
-  -p '{"spec": {"type": "NodePort"}}'
+# 3. Patch the ArgoCD server service to type NodePort and set a static port.
+#    - http is set to port 30080.
+#    - https is set to port 30443.
+echo "Patching ArgoCD server service to a static NodePort (30080)..."
+kubectl -n argocd patch svc argocd-server --type='json' -p='[{"op": "replace", "path": "/spec/type", "value": "NodePort"}, {"op": "replace", "path": "/spec/ports", "value": [{"name": "http", "port": 80, "targetPort": 8080, "nodePort": 30080, "protocol": "TCP"}, {"name": "https", "port": 443, "targetPort": 8080, "nodePort": 30443, "protocol": "TCP"}]}]'
 
-# Wait for ArgoCD server pod to be ready
+# 4. Wait for the ArgoCD server deployment to be ready before proceeding.
 echo "Waiting for ArgoCD server to be ready..."
 kubectl -n argocd rollout status deploy/argocd-server --timeout=300s
 
-# Change admin password
+# 5. Change the default admin password to 'appu@123'.
+#    It generates a bcrypt hash and patches the argocd-secret.
 echo "Changing ArgoCD admin password..."
-NEW_PASS_HASH=$(htpasswd -nbBC 10 "" "appu@123" | tr -d ':\n' | sed 's/^//')
+NEW_PASS_HASH=$(htpasswd -nbBC 10 "" "appu@123" | tr -d ':\n')
 kubectl -n argocd patch secret argocd-secret \
   -p '{"stringData": {"admin.password": "'"$NEW_PASS_HASH"'", "admin.passwordMtime": "'$(date +%FT%T%Z)'"}}'
 
-# Restart ArgoCD server to apply password change
+# 6. Restart the ArgoCD server to apply the password change.
 echo "Restarting ArgoCD server..."
 kubectl -n argocd rollout restart deploy/argocd-server
+kubectl -n argocd rollout status deploy/argocd-server --timeout=300s # Wait for restart to complete
 
-# Install ArgoCD CLI
+# 7. Install the ArgoCD command-line interface (CLI).
 echo "Installing ArgoCD CLI..."
 sudo curl -sSL -o /usr/local/bin/argocd \
   https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
 sudo chmod +x /usr/local/bin/argocd
 
-# Get Node IP and NodePort
+# 8. Get the cluster's internal IP and set the static NodePort.
 NODE_IP=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}')
-NODE_PORT=$(kubectl -n argocd get svc argocd-server -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}')
+NODE_PORT=30080 # This is now hardcoded to match the patch above.
 
-# Login with CLI
+# 9. Log in using the ArgoCD CLI to verify credentials and server access.
 echo "Logging in with ArgoCD CLI..."
 argocd login $NODE_IP:$NODE_PORT \
   --username admin \
   --password appu@123 \
   --insecure
 
-# Create cart-service application
-echo "Creating ArgoCD application: cart-service..."
-kubectl apply -f - <<EOF
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: cart-service
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: 'https://github.com/shopping-microservices-microshop/deploy-centre.git'
-    path: kubernetes/cart
-    targetRevision: HEAD
-  destination:
-    server: 'https://kubernetes.default.svc'
-    namespace: default
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
-EOF
+# 10. Create the 'cart-service' application declaratively.
+#     This application points to a Git repository for its configuration.
+echo "Creating ArgoCD application: application.."
 
-# Auto-sync the application
+kubectl apply -f ./kubernetes/argocd/
+
+
+# 11. Manually trigger an initial sync for the application.
 echo "Syncing cart-service application..."
 argocd app sync cart-service
+argocd app sync product-service
+argocd app sync query-service
+argocd app sync frontend
 
+
+# 12. Print the final access details.
+echo ""
 echo "✅ ArgoCD setup completed!"
 echo "👉 Username: admin"
 echo "👉 Password: appu@123"
 echo "👉 Access ArgoCD at: http://$NODE_IP:$NODE_PORT"
 echo "👉 Application 'cart-service' has been created and synced."
+
 
