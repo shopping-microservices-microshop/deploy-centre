@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: product-service
-          image: willchrist/product:beta
+          image: willchrist/product-service:491b1f4
           ports:
             - containerPort: 8001
           envFrom:
@@ -32,4 +32,7 @@ spec:
     - port: 8001
       targetPort: 8001
   type: ClusterIP
-
+  template:
+    spec:
+      containers:
+        - image: willchrist/product-service:491b1f4
