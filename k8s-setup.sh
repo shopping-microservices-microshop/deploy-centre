@@ -24,3 +24,5 @@ kubectl describe node kmaster | grep Taint
  
 # Remove control-plane taint to allow scheduling pods on master
 kubectl taint node kmaster node-role.kubernetes.io/control-plane:NoSchedule- || true
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+
