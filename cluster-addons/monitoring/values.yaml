@@ -4,35 +4,30 @@
 # --- Grafana Configuration ---
 grafana:
   # Set a default password for the 'admin' user.
-  # In a production environment, it's better to manage this secret separately.
   adminPassword: "Password@123"
 
-  # Change the service type to NodePort to expose Grafana externally.
   service:
     type: NodePort
-    # We can set a static port for predictability. This must be in the 30000-32767 range.
     nodePort: 32000
 
-  # Persist the Grafana database and dashboards.
-  # This requires a default StorageClass to be available in your cluster.
+  ingress:
+    enabled: false
+
+  # Persistence for Grafana is disabled.
   persistence:
-    enabled: true
-    type: pvc
-    size: 10Gi
-    accessModes:
-      - ReadWriteOnce
+    enabled: false
 
 # --- Prometheus Configuration ---
 prometheus:
   prometheusSpec:
-    # Persist the Prometheus time-series database.
-    storageSpec:
-      volumeClaimTemplate:
-        spec:
-          storageClassName: standard # Make sure this matches a StorageClass in your cluster
-          accessModes: ["ReadWriteOnce"]
-          resources:
-            requests:
-              storage: 50Gi
+    # We are disabling persistence for Prometheus for now to resolve the "Pending" pod issue.
+    # Setting storageSpec to an empty object tells Helm to use a temporary 'emptyDir' volume.
+    storageSpec: {}
+
+# --- Alertmanager Configuration ---
+alertmanager:
+  alertmanagerSpec:
+    # We are also disabling persistence for Alertmanager.
+    storage: {}
 
 
