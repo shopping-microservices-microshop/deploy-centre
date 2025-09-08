@@ -52,6 +52,9 @@ argocd login $NODE_IP:$NODE_PORT \
   --password appu@123 \
   --insecure
 
+echo "Applying all ArgoCD application manifests from kubernetes/argocd/..."
+# This command applies all .yaml files in the directory
+sudo -u ubuntu kubectl apply -f /home/ubuntu/deploy-centre/kubernetes/argocd/
 
 # 12. Print the final access details.
 echo ""

@@ -1,7 +1,0 @@
-apiVersion: v2
-name: frontend
-description: Helm chart for deploying the Frontend Service
-type: application
-version: 0.1.0        # Chart version
-appVersion: "beta"     # Docker image version
-

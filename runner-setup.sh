@@ -1,17 +1,24 @@
 #!/bin/bash
-# GitHub Actions self-hosted runner setup script with Docker 
+# GitHub Actions self-hosted runner setup script with Docker
 # Assumes Ubuntu and runner user is 'ubuntu'
 
 set -e
 
 # =======================
-# Variables — UPDATE THESE
+# Variables
 # =======================
 RUNNER_USER=ubuntu
 REPO_URL="https://github.com/shopping-microservices-microshop"
-RUNNER_TOKEN="A7LMLE5WK5RLGCB5QJUC76LIXE7GE"
-RUNNER_VERSION="2.328.0"
+# The token is now passed in as the first argument to this script
+RUNNER_TOKEN="$1"
+RUNNER_VERSION="2.328.0" # Consider updating this version periodically
 RUNNER_DIR="/home/$RUNNER_USER/actions-runner"
+
+# Check if a token was provided
+if [ -z "$RUNNER_TOKEN" ]; then
+  echo "Error: A runner token must be provided as the first argument."
+  exit 1
+fi
 
 # =======================
 # 1. Install Docker
@@ -30,11 +37,7 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 
 # Add runner user to docker group
 sudo usermod -aG docker $RUNNER_USER
-
-# Apply docker group immediately for this session
-newgrp docker <<EONG
-docker run --rm hello-world
-EONG
+echo "Docker installed and user '$RUNNER_USER' added to the docker group."
 
 # =======================
 # 2. Download and configure runner
@@ -50,6 +53,8 @@ sudo -u $RUNNER_USER curl -o actions-runner-linux-x64-$RUNNER_VERSION.tar.gz -L 
 sudo -u $RUNNER_USER tar xzf actions-runner-linux-x64-$RUNNER_VERSION.tar.gz
 
 # Configure runner (unattended, replace if exists)
+# The --token variable is now safely passed in from the argument
+echo "Configuring the runner..."
 sudo -u $RUNNER_USER ./config.sh --url $REPO_URL --token $RUNNER_TOKEN --unattended --replace
 
 # =======================
@@ -74,13 +79,11 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOL
 
-sudo systemctl start github-runner
 # Reload systemd, enable and start service
 sudo systemctl daemon-reload
 sudo systemctl enable github-runner
+sudo systemctl start github-runner
 
 echo "=== Runner setup complete! ==="
 echo "The GitHub Actions runner is now running as a systemd service and will start on boot."
-
-
 
