@@ -1,6 +1,6 @@
 
 
-## 1\. Security First: A Zero-Trust & Least Privilege Model 
+## 1\.  Least Privilege Model 
 
 The configurations demonstrate a robust, security-conscious approach that is critical for production environments.
 
