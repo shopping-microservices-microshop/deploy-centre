@@ -52,20 +52,6 @@ argocd login $NODE_IP:$NODE_PORT \
   --password appu@123 \
   --insecure
 
-# 10. Create the 'cart-service' application declaratively.
-#     This application points to a Git repository for its configuration.
-echo "Creating ArgoCD application: application.."
-
-kubectl apply -f ./kubernetes/argocd/
-
-
-# 11. Manually trigger an initial sync for the application.
-echo "Syncing cart-service application..."
-argocd app sync cart-service
-argocd app sync product-service
-argocd app sync query-service
-argocd app sync frontend
-
 
 # 12. Print the final access details.
 echo ""
@@ -73,6 +59,4 @@ echo "✅ ArgoCD setup completed!"
 echo "👉 Username: admin"
 echo "👉 Password: appu@123"
 echo "👉 Access ArgoCD at: http://$NODE_IP:$NODE_PORT"
-echo "👉 Application 'cart-service' has been created and synced."
-
 

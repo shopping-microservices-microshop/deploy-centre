@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/shopping-microservices-microshop/query-service.git'
+    repoURL: 'https://github.com/shopping-microservices-microshop/product-service.git'
     path: k8s
     targetRevision: HEAD
   destination:
