@@ -1,39 +1,40 @@
-apiVersion: argoproj.io/v1alpha1
+apiVersion: argroj.io/v1alpha1
 kind: Application
 metadata:
-  # This name will appear in the Argo CD UI
   name: monitoring
   namespace: argocd
-  # Add a finalizer to ensure that the monitoring stack is uninstalled cleanly
-  # when this Application manifest is deleted from Git.
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
-  source:
-    # This is the public repository for the prometheus-community Helm charts
-    repoURL: 'https://prometheus-community.github.io/helm-charts'
-    chart: kube-prometheus-stack
-    # It's a good practice to pin to a specific chart version for stability
-    targetRevision: '58.0.0'
 
-    helm:
-      # This section tells Argo CD to use our custom values.yaml file
-      valueFiles:
-        # This is the correct path to the values file from the root of the Git repository.
-        - cluster-addons/monitoring/values.yaml
+  # We are changing 'source' to 'sources' to pull from multiple locations.
+  sources:
+    # Source 1: The Helm Chart from the public repository.
+    - repoURL: 'https://prometheus-community.github.io/helm-charts'
+      chart: kube-prometheus-stack
+      targetRevision: '58.0.0'
+      # We define our custom values in the helm section below.
+      helm:
+        valueFiles:
+          # This special '$values' variable tells Argo CD to look in the *other* source
+          # for a file at this path.
+          - $values/cluster-addons/monitoring/values.yaml
+
+    # Source 2: Your Git repository containing the values.yaml file.
+    - repoURL: 'https://github.com/shopping-microservices-microshop/deploy-centre.git'
+      targetRevision: HEAD
+      # We give this source a name ('values') so we can reference it above.
+      ref: values
 
   destination:
-    # We are deploying this to the same cluster that Argo CD is running in
     server: 'https://kubernetes.default.svc'
-    # The monitoring stack will be installed in its own dedicated namespace
     namespace: monitoring
 
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-    # This option allows Argo CD to create the 'monitoring' namespace if it doesn't exist
     syncOptions:
       - CreateNamespace=true
 
