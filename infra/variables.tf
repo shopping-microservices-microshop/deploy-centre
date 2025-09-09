@@ -15,7 +15,7 @@ variable "instance_type" {
   default     = "t2.large"
 }
 
-variable "github_runner_token" {
+variable "runner_token" {
   description = "The registration token for the GitHub Actions runner."
   type        = string
   sensitive   = true
