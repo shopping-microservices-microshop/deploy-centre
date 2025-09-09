@@ -15,7 +15,7 @@ resource "aws_instance" "k8s_master" {
 
   # The templatefile function securely injects secrets into the bootstrap script.
   user_data = templatefile("${path.module}/bootstrap.sh.tpl", {
-    github_runner_token   = var.github_runner_token
+    runner_token   = var.runner_token
     aws_access_key_id     = var.aws_access_key_id
     aws_secret_access_key = var.aws_secret_access_key
   })
