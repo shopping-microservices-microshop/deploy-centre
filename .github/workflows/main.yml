@@ -35,7 +35,7 @@ jobs:
             -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
       - name: Get EC2 public IP
-        id: ip
+        id: get-ip
         working-directory: ${{ env.TF_WORKDIR }}
         run: |
           PUBLIC_IP=$(terraform output -raw public_ip)
@@ -80,4 +80,8 @@ EOF
       - name: Post-setup info
         run: |
           echo "✅ master-setup.sh has been triggered on the EC2 instance."
-          echo "ssh -i <your-key.pem> ubuntu@${{ env.EC2_PUBLIC_IP }}"
+          echo "SSH into the instance:"
+          echo "  ssh -i <your-key.pem> ubuntu@${{ env.EC2_PUBLIC_IP }}"
+          echo "Check logs on the instance:"
+          echo "  sudo tail -f /var/log/cloud-init-output.log"
+          echo "  ls -la /home/ubuntu/deploy-centre"
