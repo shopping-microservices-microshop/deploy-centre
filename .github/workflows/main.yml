@@ -14,52 +14,63 @@ on:
 jobs:
   provision-and-setup:
     name: Provision and Setup Environment
-    # This now runs on your self-hosted runner, which needs Node.js installed.
+    # This now runs on your self-hosted runner.
     runs-on: self-hosted
 
     steps:
       # Step 1: Check out the repository
-      # This makes all your scripts and Terraform files available to the workflow.
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       # Step 2: Install Node.js on the runner
-      # This is required for the 'configure-aws-credentials' action to run.
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Use a recent Long-Term Support (LTS) version
+          node-version: '20'
 
       # Step 3: Configure AWS Credentials
-      # This action securely configures the AWS CLI with your secrets,
-      # which Terraform will use to authenticate with your AWS account.
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1 # Or your preferred region
+          aws-region: us-east-1
 
       # Step 4: Setup Terraform
-      # This action installs a specific version of the Terraform CLI.
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.6.0 # Or a newer version
+          terraform_version: 1.6.0
 
-      # Step 5: Run Terraform to Provision the EC2 Instance
-      # This is the core step. It now includes a cleanup command.
-      - name: Apply Terraform Configuration
+      # Step 5: Run Terraform with Check-and-Import Logic
+      # This is the core step that makes the workflow resilient without an S3 backend.
+      - name: Initialize, Import, and Apply Terraform
         id: terraform
-        working-directory: ./infra # Run commands from the 'infra' subdirectory
+        working-directory: ./infra
         run: |
-          # ✅ NEW STEP: Clean up previous Terraform artifacts to ensure a fresh start
-          echo "Cleaning up previous Terraform run artifacts..."
-          rm -rf .terraform*
-          rm -f terraform.tfstate*
+          # Define the name we expect the EC2 instance to have
+          INSTANCE_NAME="k8s-master-runner"
 
-          # Now, initialize and apply with a clean slate
+          echo "Initializing a fresh Terraform workspace..."
           terraform init
+
+          echo "Checking if EC2 instance '$INSTANCE_NAME' already exists..."
+          # Use the AWS CLI to find a running instance with the correct tag
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=$INSTANCE_NAME" "Name=instance-state-name,Values=running,pending" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+          # If an instance ID was found, import it into our new state file
+          if [ -n "$INSTANCE_ID" ]; then
+            echo "Instance found with ID: $INSTANCE_ID. Importing into Terraform state..."
+            terraform import aws_instance.k8s_master "$INSTANCE_ID"
+          else
+            echo "No existing instance found. Terraform will create a new one."
+          fi
+
+          echo "Applying Terraform configuration..."
+          # Now, apply the configuration. Terraform has a synchronized state and will do the right thing.
           terraform apply -auto-approve \
             -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
             -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
@@ -67,7 +78,6 @@ jobs:
             -var="ssh_key_name=your_key_pair_name" # IMPORTANT: Replace with your actual EC2 key pair name
 
       # Step 6: Output the public IP of the new instance
-      # This makes it easy to find and connect to your new server.
       - name: Display New Instance IP
         run: |
           echo "✅ Environment setup has been initiated on the new EC2 instance."
