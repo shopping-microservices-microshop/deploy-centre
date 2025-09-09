@@ -39,7 +39,7 @@ jobs:
         id: get-ip
         working-directory: ${{ env.TF_WORKDIR }}
         run: |
-          PUBLIC_IP=$(terraform output -raw public_ip)
+          PUBLIC_IP=$(terraform output -raw public_ip | head -n 1)
           echo "EC2_PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_ENV
           echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
 
