@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "ssh_key_name" {
   description = "The name of the EC2 Key Pair to allow SSH access to the instance."
   type        = string
-  default     = "my-keypair" # <-- replace with your actual EC2 key pair name
+  default     = "willchristnv" # <-- replace with your actual EC2 key pair name
 }
 
 variable "instance_type" {
