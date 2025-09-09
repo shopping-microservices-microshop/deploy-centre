@@ -1,19 +1,18 @@
-name: Provision GitOps Environment
+name: Create GitOps Environment (Option 1 - Bootstrap in EC2)
 
 on:
   workflow_dispatch:
 
 jobs:
-  terraform:
-    name: Provision EC2 with Terraform
-    runs-on: ubuntu-latest  # or ubuntu-latest if you don't have a self-hosted runner yet
+  provision-and-bootstrap:
+    runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
+      # Step 1: Checkout Repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Step 2: Configure AWS credentials
+      # Step 2: Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -27,31 +26,34 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      # Step 4: Terraform Init
-      - name: Terraform Init
-        working-directory: ./infra
-        run: terraform init
-
-      # Step 5: Terraform Plan
-      - name: Terraform Plan
+      # Step 4: Terraform Init & Apply
+      - name: Terraform Init & Apply
         working-directory: ./infra
         run: |
-          terraform plan \
-            -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
-            -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-            -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-
-      # Step 6: Terraform Apply
-      - name: Terraform Apply
-        working-directory: ./infra
-        run: |
+          terraform init
           terraform apply -auto-approve \
             -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
             -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
             -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
-      # Step 7: Show Public IP
-      - name: Show EC2 Public IP
-        working-directory: ./infra
+      # Step 5: Get Instance Public IP
+      - name: Get Instance IP
+        id: getip
         run: |
-          terraform output -raw public_ip || echo "No public_ip output defined"
+          INSTANCE_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=k8s-master-runner" "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].PublicIpAddress" \
+            --output text)
+          echo "INSTANCE_IP=$INSTANCE_IP" >> $GITHUB_ENV
+          echo "EC2 Public IP: $INSTANCE_IP"
+
+      # Step 6: Info for Debugging
+      - name: Print Debug Instructions
+        run: |
+          echo "✅ Terraform applied successfully."
+          echo "EC2 Public IP: $INSTANCE_IP"
+          echo ""
+          echo "Bootstrap is running automatically inside EC2 via user_data."
+          echo "To monitor the setup process, SSH into the instance and check logs:"
+          echo "  ssh -i <your-key.pem> ubuntu@$INSTANCE_IP"
+          echo "  tail -f /var/log/cloud-init-output.log"
