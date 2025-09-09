@@ -7,6 +7,7 @@ variable "aws_region" {
 variable "ssh_key_name" {
   description = "The name of the EC2 Key Pair to allow SSH access to the instance."
   type        = string
+  default     = "my-keypair" # <-- replace with your actual EC2 key pair name
 }
 
 variable "instance_type" {
@@ -36,7 +37,5 @@ variable "aws_secret_access_key" {
 variable "security_group_id" {
   description = "The ID of the existing security group to attach to the EC2 instance."
   type        = string
-  default     = "sg-083cd817b13d667d1" # Your specified security group ID
+  default     = "sg-083cd817b13d667d1" # <-- replace with your actual security group ID
 }
-
-
