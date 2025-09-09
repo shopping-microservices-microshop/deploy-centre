@@ -14,7 +14,7 @@ on:
 jobs:
   provision-and-setup:
     name: Provision and Setup Environment
-    # Use a standard GitHub-hosted runner to execute the Terraform commands
+    # This now runs on your self-hosted runner, which needs Node.js installed.
     runs-on: self-hosted
 
     steps:
@@ -23,7 +23,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Step 2: Configure AWS Credentials
+      # Step 2: Install Node.js on the runner
+      # This is required for the 'configure-aws-credentials' action to run.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use a recent Long-Term Support (LTS) version
+
+      # Step 3: Configure AWS Credentials
       # This action securely configures the AWS CLI with your secrets,
       # which Terraform will use to authenticate with your AWS account.
       - name: Configure AWS Credentials
@@ -33,30 +40,33 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1 # Or your preferred region
 
-      # Step 3: Setup Terraform
+      # Step 4: Setup Terraform
       # This action installs a specific version of the Terraform CLI.
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.6.0 # Or a newer version
 
-      # Step 4: Run Terraform to Provision the EC2 Instance
-      # This is the core step. It initializes and applies your Terraform configuration.
-      # The secrets are passed securely as command-line variables.
+      # Step 5: Run Terraform to Provision the EC2 Instance
+      # This is the core step. It now includes a cleanup command.
       - name: Apply Terraform Configuration
         id: terraform
         working-directory: ./infra # Run commands from the 'infra' subdirectory
         run: |
+          # ✅ NEW STEP: Clean up previous Terraform artifacts to ensure a fresh start
+          echo "Cleaning up previous Terraform run artifacts..."
+          rm -rf .terraform*
+          rm -f terraform.tfstate*
+
+          # Now, initialize and apply with a clean slate
           terraform init
-          # The -var flags pass your GitHub secrets to the Terraform variables.
-          # The bootstrap script on the EC2 instance will then use these values.
           terraform apply -auto-approve \
             -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
             -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
             -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-            -var="ssh_key_name=willchristnv" # IMPORTANT: Replace with your actual EC2 key pair name
+            -var="ssh_key_name=your_key_pair_name" # IMPORTANT: Replace with your actual EC2 key pair name
 
-      # Step 5: Output the public IP of the new instance
+      # Step 6: Output the public IP of the new instance
       # This makes it easy to find and connect to your new server.
       - name: Display New Instance IP
         run: |
