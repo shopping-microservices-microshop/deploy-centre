@@ -6,7 +6,7 @@ on:
 jobs:
   terraform:
     name: Provision EC2 with Terraform
-    runs-on: self-hosted  # or ubuntu-latest if you don’t yet have a self-hosted runner
+    runs-on: ubuntu-latest  # or ubuntu-latest if you don’t yet have a self-hosted runner
 
     steps:
       # Step 1: Checkout repository
