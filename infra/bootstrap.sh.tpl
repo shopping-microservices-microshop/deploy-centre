@@ -6,7 +6,7 @@ set -e
 set -x # Print each command for easier debugging
 
 # --- VARIABLES (injected by Terraform) ---
-RUNNER_TOKEN="${github_runner_token}"
+RUNNER_TOKEN="${runner_token}"
 AWS_KEY_ID="${aws_access_key_id}"
 AWS_SECRET_KEY="${aws_secret_access_key}"
 REPO_URL="https://github.com/shopping-microservices-microshop/deploy-centre.git"
