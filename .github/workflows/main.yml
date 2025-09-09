@@ -6,7 +6,7 @@ on:
 jobs:
   terraform:
     name: Provision EC2 with Terraform
-    runs-on: ubuntu-latest  # or ubuntu-latest if you don’t yet have a self-hosted runner
+    runs-on: ubuntu-latest  # or ubuntu-latest if you don't have a self-hosted runner yet
 
     steps:
       # Step 1: Checkout repository
@@ -35,18 +35,20 @@ jobs:
       # Step 5: Terraform Plan
       - name: Terraform Plan
         working-directory: ./infra
-        run: terraform plan \
-          -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
-          -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-          -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+        run: |
+          terraform plan \
+            -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
+            -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
       # Step 6: Terraform Apply
       - name: Terraform Apply
         working-directory: ./infra
-        run: terraform apply -auto-approve \
-          -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
-          -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-          -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+        run: |
+          terraform apply -auto-approve \
+            -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
+            -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
       # Step 7: Show Public IP
       - name: Show EC2 Public IP
