@@ -1,55 +1,30 @@
-name: Provision GitOps Environment
+provider "aws" {
+  region = var.aws_region
+}
 
-on:
-  workflow_dispatch:
+resource "aws_instance" "k8s_master" {
+  ami                         = "ami-04f59c565deeb2199" # Ubuntu 22.04 (example), update if needed
+  instance_type               = var.instance_type
+  key_name                    = var.ssh_key_name
+  associate_public_ip_address = true
+  vpc_security_group_ids      = [var.security_group_id]
 
-jobs:
-  terraform:
-    name: Provision EC2 with Terraform
-    runs-on: ubuntu-latest if no self-hosted runner yet
+  # Inject sensitive values into bootstrap script securely
+  user_data = templatefile("${path.module}/bootstrap.sh.tpl", {
+    runner_token        = var.runner_token
+    aws_access_key_id   = var.aws_access_key_id
+    aws_secret_access_key = var.aws_secret_access_key
+  })
 
-    steps:
-      # Step 1: Checkout repository
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+  tags = {
+    Name = "k8s-master-runner"
+    Environment = "GitOps"
+    ManagedBy   = "Terraform"
+  }
+}
 
-      # Step 2: Configure AWS credentials
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      # Step 3: Setup Terraform
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.6.0
-
-      # Step 4: Terraform Init
-      - name: Terraform Init
-        working-directory: ./infra
-        run: terraform init
-
-      # Step 5: Terraform Plan
-      - name: Terraform Plan
-        working-directory: ./infra
-        run: terraform plan \
-          -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
-          -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-          -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-
-      # Step 6: Terraform Apply
-      - name: Terraform Apply
-        working-directory: ./infra
-        run: terraform apply -auto-approve \
-          -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
-          -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-          -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-
-      # Step 7: Show Public IP
-      - name: Show EC2 Public IP
-        working-directory: ./infra
-        run: |
-          terraform output -raw public_ip || echo "No public_ip output defined"
+# Output the EC2 public IP
+output "public_ip" {
+  description = "Public IP of the GitOps EC2 instance"
+  value       = aws_instance.k8s_master.public_ip
+}
