@@ -12,7 +12,7 @@ variable "ssh_key_name" {
 variable "instance_type" {
   description = "EC2 instance type for the runner."
   type        = string
-  default     = "t3.large"
+  default     = "t2.large"
 }
 
 variable "github_runner_token" {
