@@ -15,7 +15,7 @@ jobs:
   provision-and-setup:
     name: Provision and Setup Environment
     # Use a standard GitHub-hosted runner to execute the Terraform commands
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       # Step 1: Check out the repository
