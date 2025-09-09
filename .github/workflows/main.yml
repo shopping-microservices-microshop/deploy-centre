@@ -27,126 +27,55 @@ jobs:
 
       - name: Terraform Init & Apply
         working-directory: ${{ env.TF_WORKDIR }}
-        run: |
-          terraform init
-          terraform apply -auto-approve \
-            -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
-            -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
-            -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+        run: >
+          terraform init &&
+          terraform apply -auto-approve
+          -var="runner_token=${{ secrets.RUNNER_TOKEN }}"
+          -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}"
+          -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
-      - name: Get EC2 public IP from Terraform output
-        id: get-ip
+      - name: Get EC2 public IP
+        id: ip
         working-directory: ${{ env.TF_WORKDIR }}
         run: |
-          # Prefer terraform output if available
-          PUBLIC_IP=$(terraform output -raw public_ip 2>/dev/null || true)
-
-          if [ -z "$PUBLIC_IP" ]; then
-            echo "terraform output 'public_ip' not available - falling back to AWS CLI by tag"
-            PUBLIC_IP=$(aws ec2 describe-instances \
-              --filters "Name=tag:Name,Values=k8s-master-runner" "Name=instance-state-name,Values=running" \
-              --query "Reservations[].Instances[].PublicIpAddress" \
-              --output text)
-          fi
-
-          if [ -z "$PUBLIC_IP" ] || [ "$PUBLIC_IP" = "None" ]; then
-            echo "No public IP found for instance. Exiting."
-            exit 1
-          fi
-
+          PUBLIC_IP=$(terraform output -raw public_ip)
           echo "EC2_PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_ENV
-          echo "Found instance public IP: $PUBLIC_IP"
-      
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+
       - name: Prepare SSH key
         run: |
-          echo "Setting up SSH key..."
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # Ensure known_hosts won't block us (we will accept host key on first connection)
-          touch ~/.ssh/known_hosts
-        # Mask the secret from logs automatically by GH Actions secrets masking
 
-      - name: Wait for SSH to be available
+      - name: Wait for SSH
         run: |
-          HOST=${{ env.EC2_PUBLIC_IP || env.EC2_PUBLIC_IP }}
-          HOST=${{ env.EC2_PUBLIC_IP:-$EC2_PUBLIC_IP }}
-          HOST=${{ env.EC2_PUBLIC_IP:-$PUBLIC_IP }}
-          # Use GITHUB_ENV value
           HOST="${{ env.EC2_PUBLIC_IP }}"
-          if [ -z "$HOST" ]; then
-            HOST="${{ env.INSTANCE_IP }}" || true
-          fi
-          HOST="${{ env.EC2_PUBLIC_IP:-${{ env.INSTANCE_IP }}}}"
-          # Final fallback to GITHUB_ENV populated variable
-          HOST="${{ env.EC2_PUBLIC_IP }}"
-          # But simplest: use the GITHUB_ENV var created earlier:
-          HOST="${{ env.EC2_PUBLIC_IP }}"
-          # Actually read from GITHUB_ENV
-          HOST=$(cat $GITHUB_ENV | sed -n 's/^EC2_PUBLIC_IP=//p' || true)
-          if [ -z "$HOST" ]; then
-            echo "EC2 public IP not present in env, trying step output..."
-            HOST="${{ steps.get-ip.outputs.PUBLIC_IP }}"
-          fi
-
-          # simpler robust read from GITHUB_ENV with fallback to environment variable
-          HOST="${EC2_PUBLIC_IP:-${{ steps.get-ip.outputs.PUBLIC_IP }}}"
-          echo "Waiting for SSH on $HOST (this may take a minute)..."
-          set +e
-          for i in $(seq 1 30); do
-            ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i ~/.ssh/deploy_key ubuntu@"$HOST" 'echo connected' >/dev/null 2>&1 && { echo "SSH ready!"; break; }
-            echo "SSH not ready yet ($i/30). Sleeping 10s..."
+          for i in {1..30}; do
+            ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i ~/.ssh/deploy_key ubuntu@"$HOST" "echo ok" >/dev/null 2>&1 && break
+            echo "Waiting for SSH... attempt $i"
             sleep 10
           done
-          # test one more time and fail if not reachable
-          ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i ~/.ssh/deploy_key ubuntu@"$HOST" 'echo connected'
-        env:
-          # Expose the IP captured earlier for this step
-          EC2_PUBLIC_IP: ${{ env.EC2_PUBLIC_IP }}
-        timeout-minutes: 10
 
-      - name: Run master-setup.sh remotely via SSH
-        working-directory: ${{ env.TF_WORKDIR }}
+      - name: Run master-setup.sh remotely
         run: |
-          TARGET_IP="${EC2_PUBLIC_IP:-${{ steps.get-ip.outputs.PUBLIC_IP }}}"
-          if [ -z "$TARGET_IP" ]; then
-            echo "No TARGET_IP available; aborting."
-            exit 1
-          fi
-
-          echo "Ensuring repo exists and running master-setup.sh on remote..."
-          # Create a here-doc to run multiple commands on the remote host.
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ubuntu@"$TARGET_IP" /bin/bash <<'EOF'
-set -euo pipefail
-
-# Clone the repo if it doesn't exist (run as ubuntu)
+          HOST="${{ env.EC2_PUBLIC_IP }}"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ubuntu@"$HOST" <<'EOF'
+set -e
 if [ ! -d /home/ubuntu/deploy-centre ]; then
-  echo "Repo not found on remote, cloning..."
   git clone https://github.com/shopping-microservices-microshop/deploy-centre.git /home/ubuntu/deploy-centre
   chown -R ubuntu:ubuntu /home/ubuntu/deploy-centre
 fi
-
 cd /home/ubuntu/deploy-centre
-
 chmod +x master-setup.sh
-
-# Run master-setup.sh as the ubuntu user and pass the secrets as arguments.
-# NOTE: the secrets are expanded before being sent; GitHub masks secrets in logs.
 sudo -u ubuntu ./master-setup.sh "${RUNNER_TOKEN}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
 EOF
         env:
-          # These will be available in the heredoc expansion on the runner side and injected into the remote call
           RUNNER_TOKEN: ${{ secrets.RUNNER_TOKEN }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        timeout-minutes: 30
 
-      - name: Print post-setup guidance
+      - name: Post-setup info
         run: |
           echo "✅ master-setup.sh has been triggered on the EC2 instance."
-          echo "To debug further, SSH into the instance and check cloud-init and the deploy-centre logs:"
-          echo "  ssh -i <your-key.pem> ubuntu@${{ env.EC2_PUBLIC_IP || steps.get-ip.outputs.PUBLIC_IP }}"
-          echo "  sudo tail -n 200 /var/log/cloud-init-output.log"
-          echo "  ls -la /home/ubuntu/deploy-centre"
-          echo ""
-          echo "If runner registration fails, check your repository -> Settings -> Actions -> Runners."
+          echo "ssh -i <your-key.pem> ubuntu@${{ env.EC2_PUBLIC_IP }}"
