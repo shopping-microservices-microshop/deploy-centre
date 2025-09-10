@@ -20,14 +20,9 @@ grafana:
 # --- Prometheus Configuration ---
 prometheus:
   prometheusSpec:
-    # We are disabling persistence for Prometheus for now to resolve the "Pending" pod issue.
-    # Setting storageSpec to an empty object tells Helm to use a temporary 'emptyDir' volume.
+    # Disable persistence
     storageSpec: {}
-
-# --- Alertmanager Configuration ---
-alertmanager:
-  alertmanagerSpec:
-    # We are also disabling persistence for Alertmanager.
-    storage: {}
-
+  service:
+    type: NodePort
+    nodePort: 32001  # external access via EC2 IP
 
