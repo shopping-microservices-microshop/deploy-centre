@@ -68,6 +68,16 @@ sudo -u $RUNNER_USER ./config.sh \
   --unattended \
   --replace
 
+
+# Install yq (v4+)
+sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+sudo chmod +x /usr/local/bin/yq
+
+# Verify installation
+yq --version
+
+
+
 # ================================
 # 4. Create systemd service
 # ================================
