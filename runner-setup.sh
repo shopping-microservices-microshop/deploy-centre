@@ -19,6 +19,12 @@ fi
 # ================================
 # 1. Install Docker
 # ================================
+# Wait if dpkg/apt is locked by unattended-upgrades
+while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+  echo "⏳ Waiting for unattended-upgrades to finish..."
+  sleep 10
+done
+
 echo "=== Installing Docker ==="
 sudo apt-get update -y
 sudo apt-get upgrade -y
