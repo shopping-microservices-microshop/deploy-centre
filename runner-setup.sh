@@ -1,12 +1,24 @@
 #!/bin/bash
-# GitHub Actions self-hosted runner setup script with Docker
-# Assumes Ubuntu and runner user is 'ubuntu'
+set -e
 
+# ================================
+# Variables (update if needed)
+# ================================
+RUNNER_VERSION="2.328.0"
+RUNNER_USER="ubuntu"   # change if using another user
+RUNNER_DIR="/home/$RUNNER_USER/actions-runner"
+ORG_URL="https://github.com/shopping-microservices-microshop"  # org-level URL
+RUNNER_TOKEN=$1   # pass token as first argument
 
+if [ -z "$RUNNER_TOKEN" ]; then
+  echo "❌ Error: Runner token not provided."
+  echo "Usage: ./org-runner-setup.sh <RUNNER_TOKEN>"
+  exit 1
+fi
 
-# =======================
+# ================================
 # 1. Install Docker
-# =======================
+# ================================
 echo "=== Installing Docker ==="
 sudo apt-get update -y
 sudo apt-get upgrade -y
@@ -21,38 +33,16 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 
 # Add runner user to docker group
 sudo usermod -aG docker $RUNNER_USER
-echo "Docker installed and user '$RUNNER_USER' added to the docker group."
-
-# =======================
-# 2. Download and configure runner
-# =======================
-#!/bin/bash
-set -e
+echo "✅ Docker installed and user '$RUNNER_USER' added to the docker group."
 
 # ================================
-# Variables (update if needed)
-# ================================
-RUNNER_VERSION="2.328.0"
-RUNNER_USER="ubuntu"   # change if using another user
-RUNNER_DIR="/home/$RUNNER_USER/actions-runner"
-ORG_URL="https://github.com/shopping-microservices-microshop"
-RUNNER_TOKEN=$1   # pass token as first argument
-
-if [ -z "$RUNNER_TOKEN" ]; then
-  echo "❌ Error: Runner token not provided."
-  echo "Usage: ./org-runner-setup.sh <RUNNER_TOKEN>"
-  exit 1
-fi
-
-# ================================
-# 1. Install dependencies
+# 2. Install dependencies
 # ================================
 echo "=== Installing dependencies ==="
-sudo apt-get update -y
 sudo apt-get install -y curl tar
 
 # ================================
-# 2. Download and extract runner
+# 3. Download and configure runner
 # ================================
 echo "=== Setting up GitHub Actions org runner ==="
 sudo -u $RUNNER_USER mkdir -p $RUNNER_DIR
@@ -65,9 +55,6 @@ fi
 
 sudo -u $RUNNER_USER tar xzf actions-runner-linux-x64-$RUNNER_VERSION.tar.gz
 
-# ================================
-# 3. Configure the runner
-# ================================
 echo "=== Configuring runner for organization ==="
 sudo -u $RUNNER_USER ./config.sh \
   --url $ORG_URL \
@@ -107,4 +94,3 @@ sudo systemctl start github-org-runner
 
 echo "✅ Organization runner setup complete!"
 echo "Runner is installed as a systemd service (github-org-runner) and will auto-start on boot."
-
