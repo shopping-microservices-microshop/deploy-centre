@@ -2,6 +2,17 @@ provider "aws" {
   region = var.aws_region
 }
 
+terraform {
+  backend "s3" {
+    bucket         = "my-terraform-backend-willchrist-20250910"
+    key            = "infra/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-locks"
+    encrypt        = true
+  }
+}
+
+
 resource "aws_instance" "k8s_master" {
   ami                         = "ami-04f59c565deeb2199" # Update to your latest Ubuntu AMI
   instance_type               = var.instance_type

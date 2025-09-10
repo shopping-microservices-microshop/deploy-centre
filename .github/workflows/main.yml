@@ -40,7 +40,7 @@ jobs:
       - name: Terraform Init & Apply
         working-directory: ${{ env.TF_WORKDIR }}
         run: |
-          terraform init
+          terraform init -migrate-state || terraform init
           terraform apply -auto-approve \
             -var="runner_token=${{ steps.runner-token.outputs.token }}" \
             -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
