@@ -31,7 +31,7 @@ jobs:
         id: runner-token
         run: |
           TOKEN=$(curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
+            -H "Authorization: Bearer ${{ secrets.GIT_PAT }}" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/orgs/shopping-microservices-microshop/actions/runners/registration-token \
             | jq -r .token)
