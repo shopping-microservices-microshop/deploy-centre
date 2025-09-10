@@ -26,12 +26,23 @@ jobs:
           terraform_version: 1.6.0
           terraform_wrapper: false
 
+      # 🔑 Generate a fresh org runner token
+      - name: Generate runner token
+        id: runner-token
+        run: |
+          TOKEN=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/orgs/shopping-microservices-microshop/actions/runners/registration-token \
+            | jq -r .token)
+          echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
       - name: Terraform Init & Apply
         working-directory: ${{ env.TF_WORKDIR }}
         run: |
           terraform init
           terraform apply -auto-approve \
-            -var="runner_token=${{ secrets.RUNNER_TOKEN }}" \
+            -var="runner_token=${{ steps.runner-token.outputs.token }}" \
             -var="aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" \
             -var="aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
@@ -61,10 +72,9 @@ jobs:
       - name: Run master-setup.sh remotely
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ubuntu@${{ env.EC2_PUBLIC_IP }} "
-            set -eux # Exit on error, print commands
+            set -eux
             
-            # Export secrets as environment variables on the remote machine.
-            export RUNNER_TOKEN='${{ secrets.RUNNER_TOKEN }}'
+            export RUNNER_TOKEN='${{ steps.runner-token.outputs.token }}'
             export AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
             export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
             
@@ -75,13 +85,10 @@ jobs:
             fi
             
             cd /home/ubuntu/deploy-centre
-            
-            echo '--- Setting execute permissions for all .sh files ---'
             chmod +x *.sh
             
             echo '--- Executing master-setup.sh ---'
-            # Use 'sudo -E' to preserve the environment variables we just exported
-            sudo -E -u ubuntu ./master-setup.sh "$RUNNER_TOKEN" "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY"
+            sudo -E -u ubuntu ./master-setup.sh \"\$RUNNER_TOKEN\" \"\$AWS_ACCESS_KEY_ID\" \"\$AWS_SECRET_ACCESS_KEY\"
           "
 
       - name: Post-setup info
