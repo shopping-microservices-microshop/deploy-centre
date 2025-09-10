@@ -6,7 +6,8 @@ set -euo pipefail
 
 echo "🚀 Initializing Kubernetes cluster with kubeadm..."
 # The --pod-network-cidr is required for CNI plugins like Weave Net or Calico.
-sudo kubeadm init --pod-network-cidr=192.168.0.0/16
+sudo kubeadm init --pod-network-cidr=192.168.0.0/16 \
+  --cri-socket unix:///var/run/containerd/containerd.sock
 
 echo "🏠 Configuring kubectl for the 'ubuntu' user..."
 # Set up local kubeconfig specifically for the 'ubuntu' user home directory.
