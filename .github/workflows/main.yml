@@ -81,7 +81,7 @@ jobs:
             
             echo '--- Executing master-setup.sh ---'
             # Use 'sudo -E' to preserve the environment variables we just exported
-            sudo -E -u ubuntu ./master-setup.sh
+            sudo -E -u ubuntu ./master-setup.sh "$RUNNER_TOKEN" "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY"
           "
 
       - name: Post-setup info
