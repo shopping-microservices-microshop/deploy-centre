@@ -52,8 +52,7 @@ The workflow will:
 │   └── main.yml               # Main deployment workflow
 ├── infra/                     # Terraform infrastructure code
 │   ├── main.tf               # Main Terraform configuration
-│   ├── variables.tf          # Variable definitions
-│   └── bootstrap.sh.tpl      # EC2 bootstrap template
+│   ├── variables.tf          # Variable definitions      
 ├── kubernetes/               # Kubernetes manifests
 │   ├── argocd/              # ArgoCD application definitions
 │   └── cluster-infra/       # Cluster-wide resources
