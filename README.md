@@ -125,8 +125,8 @@ After successful deployment, access your services:
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | Frontend | `http://<EC2_IP>/` | - |
-| ArgoCD | `http://<EC2_IP>:30080` | admin/appu@123 |
-| Grafana | `http://<EC2_IP>:32000` | admin/Password@123 |
+| ArgoCD | `http://<EC2_IP>:30080` | - |
+| Grafana | `http://<EC2_IP>:32000` | - |
 | Prometheus | `http://<EC2_IP>:32001` | - |
 
 ## 🔍 Monitoring and Troubleshooting
@@ -191,9 +191,7 @@ kubectl logs -l app=product-service
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## 🆘 Support
 
@@ -202,10 +200,3 @@ For issues and questions:
 - Check the troubleshooting section above
 - Review the Kubernetes best practices documentation
 
-## 🔮 Roadmap
-
-- [ ] Add SSL/TLS certificates with Let's Encrypt
-- [ ] Implement backup strategies for persistent data
-- [ ] Add distributed tracing with Jaeger
-- [ ] Implement blue-green deployment strategies
-- [ ] Add automated security scanning
