@@ -1,146 +1,211 @@
-Microservices GitOps Deploy Centre
-This repository is the central control plane for bootstrapping a complete, production-ready Kubernetes environment on AWS. It automates the entire lifecycle from infrastructure provisioning with Terraform to application deployment using a GitOps model with ArgoCD.
+# Microservices E-Commerce Platform - Deployment Center
 
-The core philosophy is to have a single, manually-triggered workflow that provisions a master node, which then sets up itself and the entire cluster, including a self-hosted GitHub Actions runner for future CI/CD tasks.
+A comprehensive deployment solution for a microservices-based e-commerce platform running on Kubernetes with automated infrastructure provisioning, CI/CD, and monitoring.
 
-✨ Core Features
-Automated Infrastructure as Code (IaC): Provisions an EC2 instance on AWS using Terraform, with remote state management via S3.
+## 🏗️ Architecture Overview
 
-Automated Kubernetes Setup: Configures a Kubernetes cluster on the provisioned EC2 instance.
+This repository contains the deployment infrastructure for a complete e-commerce microservices platform including:
 
-GitOps with ArgoCD: Automatically installs and configures ArgoCD to manage the deployment of all microservices.
+- **Frontend Service** - User interface and web application
+- **Product Service** - Product catalog and inventory management
+- **Cart Service** - Shopping cart functionality with SQLite persistence
+- **Query Service** - AI-powered product search using AWS Bedrock
 
-Self-Hosted GitHub Runner: The provisioned EC2 instance is automatically configured as a self-hosted GitHub Actions runner for the organization.
+## 🚀 Quick Start
 
-Modular & Scripted Setup: The entire setup process is broken down into logical, reusable shell scripts (k8s-setup.sh, argocd-setup.sh, etc.).
+### Prerequisites
 
-Centralized Application Definitions: Uses the "App of Apps" pattern where ArgoCD tracks application definitions stored within this repository.
+- AWS Account with appropriate permissions
+- GitHub repository with secrets configured
+- EC2 Key Pair for SSH access
+- Security Group allowing HTTP/HTTPS traffic
 
-⚙️ How It Works: The Bootstrapping Flow
-The entire environment is created by a single GitHub Actions workflow, Provision + Run master-setup. Here's a step-by-step breakdown of the process:
+### Required GitHub Secrets
 
-Manual Trigger: A developer triggers the workflow from the GitHub Actions UI.
+Configure the following secrets in your GitHub repository:
 
-Provision Infrastructure:
+```
+AWS_ACCESS_KEY_ID       # AWS access key for infrastructure provisioning
+AWS_SECRET_ACCESS_KEY   # AWS secret key
+SSH_PRIVATE_KEY         # Private key for EC2 SSH access
+GIT_PAT                 # GitHub Personal Access Token for runner registration
+```
 
-The workflow checks out this repository.
+### One-Click Deployment
 
-It uses Terraform to provision an EC2 instance in AWS.
+1. Navigate to the **Actions** tab in your GitHub repository
+2. Select the **"Provision + Run master-setup (Option 2)"** workflow
+3. Click **"Run workflow"** to trigger deployment
 
-During the terraform apply step, it generates a GitHub Actions runner registration token and passes it to the EC2 instance configuration.
+The workflow will:
+- Provision EC2 infrastructure using Terraform
+- Install and configure Kubernetes
+- Set up ArgoCD for GitOps
+- Deploy monitoring with Prometheus and Grafana
+- Configure GitHub Actions self-hosted runner
 
-Remote Execution:
+## 📁 Repository Structure
 
-The workflow waits for the EC2 instance to become available via SSH.
-
-It then establishes an SSH connection to the new instance.
-
-Master Setup Orchestration:
-
-Once connected, it clones this deploy-centre repository onto the EC2 instance itself.
-
-It executes the primary orchestration script, ./master-setup.sh, on the remote machine.
-
-Cluster Configuration (on EC2):
-
-The master-setup.sh script runs a series of sub-scripts to:
-
-Install a Kubernetes distribution (e.g., k3s, kubeadm).
-
-Set up Helm for package management.
-
-Install and configure ArgoCD.
-
-Apply the root ArgoCD application manifest (root-argo.yaml), which tells ArgoCD to start managing all other applications defined in the kubernetes/argocd directory.
-
-Install monitoring tools and other cluster addons.
-
-Configure and start the GitHub Actions runner service.
-
-GitOps Takes Over:
-
-ArgoCD, now running in the cluster, reads its configuration from this repository.
-
-It finds the application definitions for cart-service, frontend, etc., and begins deploying them by pulling their respective repositories and Kubernetes manifests.
-
-The cluster is now self-managing. Any changes merged to the microservice repositories' k8s manifests will be automatically synced by ArgoCD.
-
-📂 Repository Structure
+```
 .
-├── .github/workflows/      # Contains the main bootstrapping GitHub Action
-├── infra/                  # Terraform code for AWS infrastructure (EC2, etc.)
-│   ├── main.tf
-│   └── variables.tf
-├── kubernetes/             # Kubernetes manifests for ArgoCD
-│   ├── root-argo.yaml      # The root "App of Apps" manifest
-│   └── argocd/             # ArgoCD Application definitions for each microservice
-│       ├── cart-argo.yaml
-│       └── ...
-├── cluster-addons/         # (Optional) Manifests for cluster tools like Prometheus, Grafana
-├── master-setup.sh         # The master orchestration script run on the EC2 instance
-├── k8s-setup.sh            # Script to install and configure Kubernetes
-├── argocd-setup.sh         # Script to install and configure ArgoCD
-├── helm-setup.sh           # Script to install Helm
-├── runner-setup.sh         # Script to configure the self-hosted GitHub runner
-└── ...                     # Other helper scripts and documentation
+├── .github/workflows/          # GitHub Actions workflows
+│   └── main.yml               # Main deployment workflow
+├── infra/                     # Terraform infrastructure code
+│   ├── main.tf               # Main Terraform configuration
+│   ├── variables.tf          # Variable definitions
+│   └── bootstrap.sh.tpl      # EC2 bootstrap template
+├── kubernetes/               # Kubernetes manifests
+│   ├── argocd/              # ArgoCD application definitions
+│   └── cluster-infra/       # Cluster-wide resources
+├── cluster-addons/          # Helm chart configurations
+│   └── monitoring/          # Prometheus/Grafana values
+├── *.sh                     # Setup and installation scripts
+└── README.md               # This file
+```
 
-🚀 Getting Started: Full Environment Deployment
-Follow these steps to provision and configure the entire environment from scratch.
+## 🛠️ Components
 
-Prerequisites
-AWS Account: An AWS account with an IAM user and programmatic access (Access Key ID & Secret).
+### Infrastructure (Terraform)
 
-Terraform Backend: An S3 bucket and a DynamoDB table in your AWS account for managing Terraform's remote state.
+- **EC2 Instance**: t2.large running Ubuntu
+- **S3 Backend**: Terraform state storage with versioning
+- **DynamoDB**: State locking for concurrent operations
+- **Security Groups**: Network access control
 
-# Example commands to create the backend resources
-aws s3api create-bucket --bucket your-unique-terraform-state-bucket-name --region us-east-1
-aws dynamodb create-table --table-name terraform-locks --attribute-definitions AttributeName=LockID,AttributeType=S --key-schema AttributeName=LockID,KeyType=HASH --provisioned-throughput ReadCapacityUnits=5,WriteCapacityUnits=5 --region us-east-1
+### Kubernetes Platform
 
-GitHub PAT: A GitHub Personal Access Token with admin:org scope to allow the creation of organization-level self-hosted runners.
+- **Runtime**: CRI-O container runtime
+- **CNI**: Weave Net networking
+- **Ingress**: NGINX Ingress Controller
+- **Metrics**: Metrics Server for HPA
+- **Storage**: Local persistent volumes
 
-SSH Key Pair: An SSH key pair created in the AWS EC2 console. The private key will be used to connect to the instance.
+### GitOps (ArgoCD)
 
-Configuration
-Update Terraform Backend: In infra/main.tf, update the backend "s3" block with your S3 bucket name and DynamoDB table name.
+- **Applications**: Individual service deployments
+- **Sync Policy**: Automated with self-healing
+- **Access**: NodePort on port 30080
+- **Credentials**: admin/appu@123
 
-Add GitHub Secrets: Add the following secrets to your deploy-centre repository or to the organization's settings:
+### Monitoring Stack
 
-AWS_ACCESS_KEY_ID: Your AWS access key ID.
+- **Prometheus**: Metrics collection and alerting
+- **Grafana**: Visualization and dashboards
+- **Access**: 
+  - Grafana: Port 32000 (admin/Password@123)
+  - Prometheus: Port 32001
 
-AWS_SECRET_ACCESS_KEY: Your AWS secret access key.
+### Security Features
 
-GIT_PAT: Your GitHub Personal Access Token.
+- **Network Policies**: Zero-trust networking with default deny
+- **RBAC**: Least-privilege access controls
+- **Security Contexts**: Non-root containers with proper permissions
+- **Secrets Management**: Kubernetes secrets for sensitive data
 
-SSH_PRIVATE_KEY: The entire content of your private SSH key file (.pem).
+## 🔧 Manual Setup (Alternative)
 
-Deployment
-Navigate to the Actions tab of this repository.
+If you prefer manual deployment, follow these steps on your EC2 instance:
 
-Find the "Provision + Run master-setup" workflow in the sidebar.
+```bash
+# Clone the repository
+git clone https://github.com/shopping-microservices-microshop/deploy-centre.git
+cd deploy-centre
 
-Click "Run workflow", leave the default branch (main), and click the green "Run workflow" button.
+# Make scripts executable
+chmod +x *.sh
 
-You can monitor the progress in the Actions log. The process will take several minutes.
+# Run the master setup script
+./master-setup.sh <RUNNER_TOKEN> <AWS_ACCESS_KEY> <AWS_SECRET_KEY>
+```
 
-🔎 Post-Deployment Verification
-Once the GitHub Action completes successfully, your environment is ready.
+## 📊 Service Access Points
 
-Check the Runner: Go to your GitHub organization's Settings > Actions > Runners. You should see a new, idle self-hosted runner.
+After successful deployment, access your services:
 
-SSH into the Instance: Use the public IP address output by the GitHub Action to connect:
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Frontend | `http://<EC2_IP>/` | - |
+| ArgoCD | `http://<EC2_IP>:30080` | admin/appu@123 |
+| Grafana | `http://<EC2_IP>:32000` | admin/Password@123 |
+| Prometheus | `http://<EC2_IP>:32001` | - |
 
-ssh -i /path/to/your-key.pem ubuntu@<EC2_PUBLIC_IP>
+## 🔍 Monitoring and Troubleshooting
 
-Access ArgoCD UI:
+### Check Deployment Status
 
-Get the initial admin password:
+```bash
+# Check all pods
+kubectl get pods -A
 
-# Run this on the EC2 instance
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+# Check ArgoCD applications
+kubectl get applications -n argocd
 
-Expose the ArgoCD server UI to your local machine:
+# Check ingress status
+kubectl get ingress
+```
 
-# Run this on your local machine after SSH-ing to the EC2 instance in another terminal
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+### View Logs
 
-Open https://localhost:8080 in your browser, and log in with the username admin and the password from the previous step. You should see all your microservices being deployed and synced.
+```bash
+# System logs
+sudo tail -f /var/log/cloud-init-output.log
+
+# Kubernetes logs
+kubectl logs -n argocd deployment/argocd-server
+
+# Service logs
+kubectl logs -l app=product-service
+```
+
+### Common Issues
+
+1. **Pods in Pending State**: Check resource availability and PVC binding
+2. **Network Issues**: Verify NetworkPolicy configurations
+3. **ArgoCD Sync Issues**: Check repository access and manifest validity
+
+## 🏆 Best Practices Implemented
+
+### Security
+- **Zero-Trust Networking**: Default deny with explicit allow rules
+- **Least Privilege**: Minimal RBAC permissions
+- **Non-Root Containers**: Security contexts enforcing non-root execution
+- **Secret Management**: External secrets injection
+
+### High Availability
+- **Health Checks**: Startup, liveness, and readiness probes
+- **Auto-scaling**: HPA based on CPU and memory metrics
+- **Resource Limits**: Guaranteed QoS classes
+- **Persistent Storage**: Proper volume management
+
+### Operations
+- **GitOps**: Declarative configuration management
+- **Monitoring**: Comprehensive metrics and visualization
+- **Automation**: Infrastructure as Code with Terraform
+- **Documentation**: Inline comments and troubleshooting guides
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For issues and questions:
+- Open an issue in this repository
+- Check the troubleshooting section above
+- Review the Kubernetes best practices documentation
+
+## 🔮 Roadmap
+
+- [ ] Add SSL/TLS certificates with Let's Encrypt
+- [ ] Implement backup strategies for persistent data
+- [ ] Add distributed tracing with Jaeger
+- [ ] Implement blue-green deployment strategies
+- [ ] Add automated security scanning
